@@ -32,6 +32,11 @@ def get_halo_token():
         },
         timeout=30,
     )
+
+    print("TOKEN URL:", HALO_TOKEN_URL, flush=True)
+    print("TOKEN STATUS:", resp.status_code, flush=True)
+    print("TOKEN RESPONSE TEXT:", resp.text[:1000], flush=True)
+
     resp.raise_for_status()
     data = resp.json()
 
