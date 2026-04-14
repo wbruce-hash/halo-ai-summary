@@ -35,10 +35,17 @@ def get_halo_token():
 
     print("TOKEN URL:", HALO_TOKEN_URL, flush=True)
     print("TOKEN STATUS:", resp.status_code, flush=True)
-    print("TOKEN RESPONSE TEXT:", resp.text[:1000], flush=True)
+    print("TOKEN HEADERS:", dict(resp.headers), flush=True)
+    print("TOKEN BODY:", resp.text[:1000], flush=True)
 
-    resp.raise_for_status()
-    data = resp.json()
+    try:
+        data = resp.json()
+    except Exception:
+        raise Exception(
+            f"Token endpoint did not return JSON. "
+            f"Status={resp.status_code}. "
+            f"Body={resp.text[:500]}"
+        )
 
     token_cache["access_token"] = data["access_token"]
     token_cache["expires_at"] = now + int(data.get("expires_in", 3600))
