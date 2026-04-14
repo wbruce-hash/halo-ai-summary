@@ -131,7 +131,12 @@ def home():
 @app.route("/halo-resolved", methods=["POST"])
 def halo_resolved():
     body = request.json or {}
-    ticket_id = body.get("ticket_id") or body.get("id")
+    ticket_id = (
+    body.get("ticket_id")
+    or body.get("object_id")
+    or (body.get("ticket") or {}).get("id")
+    or body.get("id")
+)
 
     if not ticket_id:
         return jsonify({"error": "Missing ticket_id"}), 400
