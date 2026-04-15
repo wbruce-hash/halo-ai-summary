@@ -94,8 +94,6 @@ def build_ticket_text(ticket_id):
     client_name = ticket.get("client_name") or "Unknown Client"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
-    print("TICKET JSON:", ticket, flush=True)
-
     technician = "Unassigned"
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
