@@ -75,8 +75,13 @@ def halo_post(path, payload):
         json=payload,
         timeout=30,
     )
+
+    print("POST URL:", f"{HALO_BASE}{path}", flush=True)
+    print("POST STATUS:", resp.status_code, flush=True)
+    print("POST RESPONSE:", resp.text[:2000], flush=True)
+
     resp.raise_for_status()
-    return resp.json()
+    return resp.json() if resp.text.strip() else {}
 
 
 def build_ticket_text(ticket_id):
@@ -128,7 +133,7 @@ def write_summary(ticket_id, summary):
     payload = [
         {
             "ticket_id": ticket_id,
-            "note": f"AI Resolution Summary\\n\\n{summary}",
+            "note": f"AI Resolution Summary\n\n{summary}",
             "hiddenfromuser": True
         }
     ]
