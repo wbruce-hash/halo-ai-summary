@@ -158,6 +158,10 @@ def write_summary(ticket_id, summary):
     ]
     return halo_post("/api/Actions", payload)
 
+import os
+import re
+import requests
+
 def send_to_teams(ticket_id, summary, technician):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
     if not webhook_url:
@@ -166,7 +170,36 @@ def send_to_teams(ticket_id, summary, technician):
 
     ticket_url = f"{HALO_BASE}/ticket?id={ticket_id}"
 
-    message = {
+    issue_summary = "Not provided"
+    root_cause = "Unknown"
+    resolution_steps = "Not provided"
+
+    issue_match = re.search(
+        r"Issue Summary:\s*(.*?)(?=\s*Root Cause:|\Z)",
+        summary,
+        re.DOTALL,
+    )
+    root_match = re.search(
+        r"Root Cause:\s*(.*?)(?=\s*Resolution Steps:|\Z)",
+        summary,
+        re.DOTALL,
+    )
+    resolution_match = re.search(
+        r"Resolution Steps:\s*(.*)",
+        summary,
+        re.DOTALL,
+    )
+
+    if issue_match:
+        issue_summary = issue_match.group(1).strip()
+
+    if root_match:
+        root_cause = root_match.group(1).strip()
+
+    if resolution_match:
+        resolution_steps = resolution_match.group(1).strip()
+
+    card = {
         "type": "message",
         "attachments": [
             {
@@ -183,21 +216,47 @@ def send_to_teams(ticket_id, summary, technician):
                             "wrap": True
                         },
                         {
-                            "type": "TextBlock",
-                            "text": f"Technician: {technician}",
-                            "wrap": True,
+                            "type": "FactSet",
+                            "facts": [
+                                {"title": "Technician", "value": technician},
+                                {"title": "Ticket", "value": str(ticket_id)}
+                            ],
                             "spacing": "Small"
                         },
                         {
                             "type": "TextBlock",
-                            "text": "AI Resolution Summary",
+                            "text": "Issue Summary",
                             "weight": "Bolder",
                             "spacing": "Medium",
                             "wrap": True
                         },
                         {
                             "type": "TextBlock",
-                            "text": summary,
+                            "text": issue_summary,
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "Root Cause",
+                            "weight": "Bolder",
+                            "spacing": "Medium",
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": root_cause,
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "Resolution Steps",
+                            "weight": "Bolder",
+                            "spacing": "Medium",
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": resolution_steps,
                             "wrap": True
                         }
                     ],
@@ -214,7 +273,7 @@ def send_to_teams(ticket_id, summary, technician):
     }
 
     try:
-        resp = requests.post(webhook_url, json=message, timeout=10)
+        resp = requests.post(webhook_url, json=card, timeout=10)
         print("TEAMS STATUS:", resp.status_code, flush=True)
         print("TEAMS RESPONSE:", resp.text[:1000], flush=True)
     except Exception as e:
