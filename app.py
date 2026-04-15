@@ -86,34 +86,32 @@ def halo_post(path, payload):
 
 def build_ticket_text(ticket_id):
     ticket = halo_get(f"/api/Tickets/{ticket_id}")
-    print("TICKET JSON:", ticket, flush=True)
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
-    print("TICKET KEYS:", list(ticket.keys()), flush=True)
+    print("TICKET JSON:", ticket, flush=True)
 
     technician = "Unassigned"
 
-action_items = actions.get("actions") or actions.get("actionsdetails") or []
+    action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-# Get last real agent who worked the ticket
-for action in reversed(action_items):
-    who = action.get("who")
-    who_type = action.get("who_type")
+    # Get last real agent who worked the ticket
+    for action in reversed(action_items):
+        who = action.get("who")
+        who_type = action.get("who_type")
 
-    if who and who_type == 1:
-        technician = who
-        break
+        if who and who_type == 1:
+            technician = who
+            break
 
-# Fallback if no actions found
-if technician == "Unassigned":
-    technician = ticket.get("takenby") or "Unassigned"
+    # Fallback
+    if technician == "Unassigned":
+        technician = ticket.get("takenby") or "Unassigned"
 
     parts = []
     parts.append(f"Ticket ID: {ticket.get('id')}")
     parts.append(f"Summary: {ticket.get('summary', '')}")
     parts.append(f"Details: {ticket.get('details', '')}")
 
-    action_items = actions.get("actions") or actions.get("actionsdetails") or []
     for action in action_items:
         note = action.get("note") or action.get("private_note") or ""
         if note and note.strip():
