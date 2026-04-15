@@ -86,6 +86,7 @@ def halo_post(path, payload):
 
 def build_ticket_text(ticket_id):
     ticket = halo_get(f"/api/Tickets/{ticket_id}")
+    client_name = ticket.get("client_name") or "Unknown Client"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
     print("TICKET JSON:", ticket, flush=True)
@@ -117,7 +118,7 @@ def build_ticket_text(ticket_id):
         if note and note.strip():
             parts.append(note)
 
-    return "\n\n".join(parts), technician
+    return "\n\n".join(parts), technician, client_name
 
 
 def summarize_ticket(ticket_text):
@@ -126,14 +127,15 @@ You are a senior MSP help desk analyst.
 
 Summarize this resolved ticket in this exact format:
 
-Issue Summary:
-Root Cause:
-Resolution Steps:
+Issue Summary: <1-2 sentences>
+Root Cause: <1 sentence or Unknown>
+Resolution Steps: <short explanation of what was done>
 
 Rules:
 - Be concise
 - Do not make things up
 - If root cause is unclear, say Unknown
+- Keep each section on one line
 
 Ticket:
 {ticket_text}
@@ -162,7 +164,7 @@ import os
 import re
 import requests
 
-def send_to_teams(ticket_id, summary, technician):
+def send_to_teams(ticket_id, summary, technician, client_name):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
     if not webhook_url:
         print("No Teams webhook configured", flush=True)
@@ -218,6 +220,7 @@ def send_to_teams(ticket_id, summary, technician):
                         {
                             "type": "FactSet",
                             "facts": [
+                                {"title": "Client", "value": client_name},
                                 {"title": "Technician", "value": technician},
                                 {"title": "Ticket", "value": str(ticket_id)}
                             ],
@@ -298,9 +301,9 @@ def halo_resolved():
     if not ticket_id:
         return jsonify({"error": "Missing ticket_id"}), 400
 
-    ticket_text, technician = build_ticket_text(int(ticket_id))
+    ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
     summary = summarize_ticket(ticket_text)
     write_summary(int(ticket_id), summary)
-    send_to_teams(ticket_id, summary, technician)
+    send_to_teams(ticket_id, summary, technician, client_name)
 
     return jsonify({"success": True, "ticket_id": ticket_id})
