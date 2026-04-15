@@ -134,7 +134,8 @@ def write_summary(ticket_id, summary):
         {
             "ticket_id": ticket_id,
             "note": f"AI Resolution Summary\n\n{summary}",
-            "hiddenfromuser": True
+            "hiddenfromuser": True,
+            "outcome": "Note Added"
         }
     ]
     return halo_post("/api/Actions", payload)
