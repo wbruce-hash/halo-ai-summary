@@ -143,10 +143,11 @@ def write_summary(ticket_id, summary):
 
 def send_to_teams(ticket_id, summary, technician):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
-
     if not webhook_url:
         print("No Teams webhook configured", flush=True)
         return
+
+    ticket_url = f"{HALO_BASE}/ticket?id={ticket_id}"
 
     message = {
         "type": "message",
@@ -155,20 +156,39 @@ def send_to_teams(ticket_id, summary, technician):
                 "contentType": "application/vnd.microsoft.card.adaptive",
                 "content": {
                     "type": "AdaptiveCard",
-                    "version": "1.2",
+                    "version": "1.4",
                     "body": [
                         {
                             "type": "TextBlock",
-                            "size": "Large",
+                            "text": f"Ticket {ticket_id} Resolved",
                             "weight": "Bolder",
-                            "text": f"Ticket {ticket_id} Resolved"
+                            "size": "Large",
+                            "wrap": True
                         },
                         {
                             "type": "TextBlock",
                             "text": f"Technician: {technician}",
-                            "isSubtle": True,
-                            "spacing": "Small",
+                            "wrap": True,
+                            "spacing": "Small"
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": "AI Resolution Summary",
+                            "weight": "Bolder",
+                            "spacing": "Medium",
                             "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": summary,
+                            "wrap": True
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Action.OpenUrl",
+                            "title": "Open Ticket in Halo",
+                            "url": ticket_url
                         }
                     ]
                 }
@@ -178,7 +198,6 @@ def send_to_teams(ticket_id, summary, technician):
 
     try:
         resp = requests.post(webhook_url, json=message, timeout=10)
-        print("TEAMS URL PRESENT: yes", flush=True)
         print("TEAMS STATUS:", resp.status_code, flush=True)
         print("TEAMS RESPONSE:", resp.text[:1000], flush=True)
     except Exception as e:
