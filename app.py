@@ -91,14 +91,22 @@ def build_ticket_text(ticket_id):
 
     print("TICKET KEYS:", list(ticket.keys()), flush=True)
 
-    technician = (
-        ticket.get("agent_name")
-        or ticket.get("assigned_agent")
-        or ticket.get("agent")
-        or ticket.get("assignedto")
-        or ticket.get("user_name")
-        or "Unassigned"
-    )
+    technician = "Unassigned"
+
+action_items = actions.get("actions") or actions.get("actionsdetails") or []
+
+# Get last real agent who worked the ticket
+for action in reversed(action_items):
+    who = action.get("who")
+    who_type = action.get("who_type")
+
+    if who and who_type == 1:
+        technician = who
+        break
+
+# Fallback if no actions found
+if technician == "Unassigned":
+    technician = ticket.get("takenby") or "Unassigned"
 
     parts = []
     parts.append(f"Ticket ID: {ticket.get('id')}")
