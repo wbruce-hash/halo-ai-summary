@@ -142,6 +142,7 @@ def write_summary(ticket_id, summary):
 
 def send_to_teams(ticket_id, summary):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
+
     if not webhook_url:
         print("No Teams webhook configured", flush=True)
         return
@@ -159,7 +160,7 @@ def send_to_teams(ticket_id, summary):
                             "type": "TextBlock",
                             "size": "Large",
                             "weight": "Bolder",
-                            "text": f"🔧 Ticket {ticket_id} Resolved"
+                            "text": f"Ticket {ticket_id} Resolved"
                         },
                         {
                             "type": "TextBlock",
@@ -173,7 +174,10 @@ def send_to_teams(ticket_id, summary):
     }
 
     try:
-        requests.post(webhook_url, json=message, timeout=10)
+        resp = requests.post(webhook_url, json=message, timeout=10)
+        print("TEAMS URL PRESENT: yes", flush=True)
+        print("TEAMS STATUS:", resp.status_code, flush=True)
+        print("TEAMS RESPONSE:", resp.text[:1000], flush=True)
     except Exception as e:
         print("Teams send failed:", str(e), flush=True)
 
