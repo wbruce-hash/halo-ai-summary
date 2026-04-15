@@ -86,6 +86,7 @@ def halo_post(path, payload):
 
 def build_ticket_text(ticket_id):
     ticket = halo_get(f"/api/Tickets/{ticket_id}")
+    technician = ticket.get("agent_name") or ticket.get("assigned_agent") or "Unassigned"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
     parts = []
@@ -99,7 +100,7 @@ def build_ticket_text(ticket_id):
         if note and note.strip():
             parts.append(note)
 
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), technician
 
 
 def summarize_ticket(ticket_text):
@@ -140,7 +141,7 @@ def write_summary(ticket_id, summary):
     ]
     return halo_post("/api/Actions", payload)
 
-def send_to_teams(ticket_id, summary):
+def send_to_teams(ticket_id, summary, technician):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
 
     if not webhook_url:
@@ -164,7 +165,9 @@ def send_to_teams(ticket_id, summary):
                         },
                         {
                             "type": "TextBlock",
-                            "text": summary,
+                            "text": f"Technician: {technician}",
+                            "isSubtle": True,
+                            "spacing": "Small",
                             "wrap": True
                         }
                     ]
@@ -200,9 +203,9 @@ def halo_resolved():
     if not ticket_id:
         return jsonify({"error": "Missing ticket_id"}), 400
 
-    ticket_text = build_ticket_text(int(ticket_id))
+    ticket_text, technician = build_ticket_text(int(ticket_id))
     summary = summarize_ticket(ticket_text)
     write_summary(int(ticket_id), summary)
-    send_to_teams(ticket_id, summary)
+    send_to_teams(ticket_id, summary, technician)
 
     return jsonify({"success": True, "ticket_id": ticket_id})
