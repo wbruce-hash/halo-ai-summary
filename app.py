@@ -191,18 +191,18 @@ def home():
 def halo_resolved():
     body = request.json or {}
     ticket_id = (
-    body.get("ticket_id")
-    or body.get("object_id")
-    or (body.get("ticket") or {}).get("id")
-    or body.get("id")
-)
+        body.get("ticket_id")
+        or body.get("object_id")
+        or (body.get("ticket") or {}).get("id")
+        or body.get("id")
+    )
 
     if not ticket_id:
         return jsonify({"error": "Missing ticket_id"}), 400
 
     ticket_text = build_ticket_text(int(ticket_id))
     summary = summarize_ticket(ticket_text)
-write_summary(int(ticket_id), summary)
-send_to_teams(ticket_id, summary)
+    write_summary(int(ticket_id), summary)
+    send_to_teams(ticket_id, summary)
 
     return jsonify({"success": True, "ticket_id": ticket_id})
