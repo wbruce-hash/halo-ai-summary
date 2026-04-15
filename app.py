@@ -32,6 +32,12 @@ def get_halo_token():
         },
         timeout=30,
     )
+    resp.raise_for_status()
+
+    data = resp.json()
+    token_cache["access_token"] = data["access_token"]
+    token_cache["expires_at"] = now + int(data.get("expires_in", 3600))
+    return token_cache["access_token"]
 
     print("TOKEN URL:", HALO_TOKEN_URL, flush=True)
     print("TOKEN STATUS:", resp.status_code, flush=True)
@@ -76,9 +82,8 @@ def halo_post(path, payload):
         timeout=30,
     )
 
-    print("POST URL:", f"{HALO_BASE}{path}", flush=True)
-    print("POST STATUS:", resp.status_code, flush=True)
-    print("POST RESPONSE:", resp.text[:2000], flush=True)
+    if not resp.ok:
+        print(f"Halo POST failed: {resp.status_code} {resp.text[:500]}", flush=True)
 
     resp.raise_for_status()
     return resp.json() if resp.text.strip() else {}
@@ -167,7 +172,7 @@ import requests
 def send_to_teams(ticket_id, summary, technician, client_name):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
     if not webhook_url:
-        print("No Teams webhook configured", flush=True)
+        print("Teams webhook not configured", flush=True)
         return
 
     ticket_url = f"{HALO_BASE}/ticket?id={ticket_id}"
@@ -176,28 +181,28 @@ def send_to_teams(ticket_id, summary, technician, client_name):
     root_cause = "Unknown"
     resolution_steps = "Not provided"
 
+    import re
+
     issue_match = re.search(
         r"Issue Summary:\s*(.*?)(?=\s*Root Cause:|\Z)",
         summary,
-        re.DOTALL,
+        re.DOTALL
     )
     root_match = re.search(
         r"Root Cause:\s*(.*?)(?=\s*Resolution Steps:|\Z)",
         summary,
-        re.DOTALL,
+        re.DOTALL
     )
     resolution_match = re.search(
         r"Resolution Steps:\s*(.*)",
         summary,
-        re.DOTALL,
+        re.DOTALL
     )
 
     if issue_match:
         issue_summary = issue_match.group(1).strip()
-
     if root_match:
         root_cause = root_match.group(1).strip()
-
     if resolution_match:
         resolution_steps = resolution_match.group(1).strip()
 
@@ -221,8 +226,7 @@ def send_to_teams(ticket_id, summary, technician, client_name):
                             "type": "FactSet",
                             "facts": [
                                 {"title": "Client", "value": client_name},
-                                {"title": "Technician", "value": technician},
-                                {"title": "Ticket", "value": str(ticket_id)}
+                                {"title": "Technician", "value": technician}
                             ],
                             "spacing": "Small"
                         },
@@ -277,10 +281,10 @@ def send_to_teams(ticket_id, summary, technician, client_name):
 
     try:
         resp = requests.post(webhook_url, json=card, timeout=10)
-        print("TEAMS STATUS:", resp.status_code, flush=True)
-        print("TEAMS RESPONSE:", resp.text[:1000], flush=True)
+        if not resp.ok:
+            print(f"Teams send failed: {resp.status_code} {resp.text[:500]}", flush=True)
     except Exception as e:
-        print("Teams send failed:", str(e), flush=True)
+        print(f"Teams send exception: {str(e)}", flush=True)
 
 
 @app.route("/")
