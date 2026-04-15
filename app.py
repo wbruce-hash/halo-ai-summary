@@ -140,6 +140,43 @@ def write_summary(ticket_id, summary):
     ]
     return halo_post("/api/Actions", payload)
 
+def send_to_teams(ticket_id, summary):
+    webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
+    if not webhook_url:
+        print("No Teams webhook configured", flush=True)
+        return
+
+    message = {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "type": "AdaptiveCard",
+                    "version": "1.2",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "size": "Large",
+                            "weight": "Bolder",
+                            "text": f"🔧 Ticket {ticket_id} Resolved"
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": summary,
+                            "wrap": True
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    try:
+        requests.post(webhook_url, json=message, timeout=10)
+    except Exception as e:
+        print("Teams send failed:", str(e), flush=True)
+
 
 @app.route("/")
 def home():
@@ -161,6 +198,7 @@ def halo_resolved():
 
     ticket_text = build_ticket_text(int(ticket_id))
     summary = summarize_ticket(ticket_text)
-    write_summary(int(ticket_id), summary)
+write_summary(int(ticket_id), summary)
+send_to_teams(ticket_id, summary)
 
     return jsonify({"success": True, "ticket_id": ticket_id})
