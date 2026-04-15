@@ -86,8 +86,18 @@ def halo_post(path, payload):
 
 def build_ticket_text(ticket_id):
     ticket = halo_get(f"/api/Tickets/{ticket_id}")
-    technician = ticket.get("agent_name") or ticket.get("assigned_agent") or "Unassigned"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
+
+    print("TICKET KEYS:", list(ticket.keys()), flush=True)
+
+    technician = (
+        ticket.get("agent_name")
+        or ticket.get("assigned_agent")
+        or ticket.get("agent")
+        or ticket.get("assignedto")
+        or ticket.get("user_name")
+        or "Unassigned"
+    )
 
     parts = []
     parts.append(f"Ticket ID: {ticket.get('id')}")
