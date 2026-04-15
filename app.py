@@ -86,6 +86,7 @@ def halo_post(path, payload):
 
 def build_ticket_text(ticket_id):
     ticket = halo_get(f"/api/Tickets/{ticket_id}")
+    print("TICKET JSON:", ticket, flush=True)
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
     print("TICKET KEYS:", list(ticket.keys()), flush=True)
