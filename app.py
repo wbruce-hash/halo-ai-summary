@@ -151,6 +151,36 @@ Ticket:
 
     return response.output_text.strip()
 
+def suggest_resolution(ticket_text):
+    prompt = f"""
+You are a senior MSP help desk analyst.
+
+Read this new support ticket and provide a practical suggested resolution in this exact format:
+
+Probable Issue: <1-2 sentences>
+Suggested Steps:
+1. <step one>
+2. <step two>
+3. <step three>
+Confidence: <Low, Medium, or High>
+
+Rules:
+- Be concise
+- Do not make things up
+- If the issue is unclear, say so
+- Give technician-friendly troubleshooting steps
+- Keep the response internal-facing, not customer-facing
+
+Ticket:
+{ticket_text}
+"""
+
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=prompt
+    )
+
+    return response.output_text.strip()
 
 def write_summary(ticket_id, summary):
     payload = [
@@ -166,6 +196,17 @@ def write_summary(ticket_id, summary):
 import os
 import re
 import requests
+
+def write_suggested_resolution(ticket_id, suggestion):
+    payload = [
+        {
+            "ticket_id": ticket_id,
+            "note": f"AI Suggested Resolution\n\n{suggestion}",
+            "hiddenfromuser": True,
+            "outcome": "Note Added"
+        }
+    ]
+    return halo_post("/api/Actions", payload)
 
 def send_to_teams(ticket_id, summary, technician, client_name):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
@@ -308,4 +349,24 @@ def halo_resolved():
     write_summary(int(ticket_id), summary)
     send_to_teams(ticket_id, summary, technician, client_name)
 
+    return jsonify({"success": True, "ticket_id": ticket_id})
+
+@app.route("/halo-new-ticket", methods=["POST"])
+def halo_new_ticket():
+    body = request.json or {}
+    ticket_id = (
+        body.get("ticket_id")
+        or body.get("object_id")
+        or (body.get("ticket") or {}).get("id")
+        or body.get("id")
+    )
+
+    if not ticket_id:
+        return jsonify({"error": "Missing ticket_id"}), 400
+
+    ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
+    suggestion = suggest_resolution(ticket_text)
+    write_suggested_resolution(int(ticket_id), suggestion)
+
+    print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
     return jsonify({"success": True, "ticket_id": ticket_id})
