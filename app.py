@@ -388,13 +388,13 @@ def halo_new_ticket():
         return jsonify({"error": "Missing ticket_id"}), 400
 
     ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
-    
-    if should_skip_ticket(ticket_text):
+
+if should_skip_ticket(ticket_text):
     print(f"Skipped marketing ticket {ticket_id}", flush=True)
     return jsonify({"success": True, "skipped": True, "ticket_id": ticket_id})
-    
-    suggestion = suggest_resolution(ticket_text)
-    write_suggested_resolution(int(ticket_id), suggestion)
+
+suggestion = suggest_resolution(ticket_text)
+write_suggested_resolution(int(ticket_id), suggestion)
 
     print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
     return jsonify({"success": True, "ticket_id": ticket_id})
