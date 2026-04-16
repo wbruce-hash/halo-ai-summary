@@ -151,6 +151,29 @@ Ticket:
 
     return response.output_text.strip()
 
+def should_skip_ticket(ticket_text):
+    text = ticket_text.lower()
+
+    marketing_patterns = [
+        "unsubscribe",
+        "manage preferences",
+        "view in browser",
+        "newsletter",
+        "marketing",
+        "campaign",
+        "constant contact",
+        "mailchimp",
+        "hubspot",
+        "special offer",
+        "click here",
+    ]
+
+    for pattern in marketing_patterns:
+        if pattern in text:
+            return True
+
+    return False
+
 def suggest_resolution(ticket_text):
     prompt = f"""
 You are a senior MSP help desk analyst.
@@ -365,6 +388,11 @@ def halo_new_ticket():
         return jsonify({"error": "Missing ticket_id"}), 400
 
     ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
+    
+    if should_skip_ticket(ticket_text):
+    print(f"Skipped marketing ticket {ticket_id}", flush=True)
+    return jsonify({"success": True, "skipped": True, "ticket_id": ticket_id})
+    
     suggestion = suggest_resolution(ticket_text)
     write_suggested_resolution(int(ticket_id), suggestion)
 
