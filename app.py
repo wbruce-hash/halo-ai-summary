@@ -94,18 +94,24 @@ def build_ticket_text(ticket_id):
     client_name = ticket.get("client_name") or "Unknown Client"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
-    technician = "Unassigned"
+    technician = ticket.get("who") or "Unassigned"
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-    # Get last real agent who worked the ticket
+    # Get last real agent who worked the ticket, but skip AI-generated notes
     for action in reversed(action_items):
         who = action.get("who")
         who_type = action.get("who_type")
+        note = (action.get("note") or "").lower()
 
-        if who and who_type == 1:
-            technician = who
-            break
+        if not who or who_type != 1:
+            continue
+
+        if "ai resolution summary" in note:
+            continue
+
+        technician = who
+        break
 
     # Fallback
     if technician == "Unassigned":
