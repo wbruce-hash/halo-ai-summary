@@ -402,5 +402,5 @@ if should_skip_ticket(ticket_text):
 suggestion = suggest_resolution(ticket_text)
 write_suggested_resolution(int(ticket_id), suggestion)
 
-    print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
-    return jsonify({"success": True, "ticket_id": ticket_id})
+print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
+return jsonify({"success": True, "ticket_id": ticket_id})
