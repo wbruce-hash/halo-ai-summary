@@ -1,7 +1,9 @@
 import os
+import re
 import time
+
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from openai import OpenAI
 
 app = Flask(__name__)
@@ -35,24 +37,6 @@ def get_halo_token():
     resp.raise_for_status()
 
     data = resp.json()
-    token_cache["access_token"] = data["access_token"]
-    token_cache["expires_at"] = now + int(data.get("expires_in", 3600))
-    return token_cache["access_token"]
-
-    print("TOKEN URL:", HALO_TOKEN_URL, flush=True)
-    print("TOKEN STATUS:", resp.status_code, flush=True)
-    print("TOKEN HEADERS:", dict(resp.headers), flush=True)
-    print("TOKEN BODY:", resp.text[:1000], flush=True)
-
-    try:
-        data = resp.json()
-    except Exception:
-        raise Exception(
-            f"Token endpoint did not return JSON. "
-            f"Status={resp.status_code}. "
-            f"Body={resp.text[:500]}"
-        )
-
     token_cache["access_token"] = data["access_token"]
     token_cache["expires_at"] = now + int(data.get("expires_in", 3600))
     return token_cache["access_token"]
@@ -95,7 +79,6 @@ def build_ticket_text(ticket_id):
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
     technician = ticket.get("who") or "Unassigned"
-
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
     # Get last real agent who worked the ticket, but skip AI-generated notes
@@ -113,14 +96,14 @@ def build_ticket_text(ticket_id):
         technician = who
         break
 
-    # Fallback
     if technician == "Unassigned":
         technician = ticket.get("takenby") or "Unassigned"
 
-    parts = []
-    parts.append(f"Ticket ID: {ticket.get('id')}")
-    parts.append(f"Summary: {ticket.get('summary', '')}")
-    parts.append(f"Details: {ticket.get('details', '')}")
+    parts = [
+        f"Ticket ID: {ticket.get('id')}",
+        f"Summary: {ticket.get('summary', '')}",
+        f"Details: {ticket.get('details', '')}",
+    ]
 
     for action in action_items:
         note = action.get("note") or action.get("private_note") or ""
@@ -152,10 +135,10 @@ Ticket:
 
     response = client.responses.create(
         model="gpt-5-mini",
-        input=prompt
+        input=prompt,
     )
-
     return response.output_text.strip()
+
 
 def should_skip_ticket(ticket_text):
     text = ticket_text.lower()
@@ -174,11 +157,8 @@ def should_skip_ticket(ticket_text):
         "click here",
     ]
 
-    for pattern in marketing_patterns:
-        if pattern in text:
-            return True
+    return any(pattern in text for pattern in marketing_patterns)
 
-    return False
 
 def suggest_resolution(ticket_text):
     prompt = f"""
@@ -206,10 +186,10 @@ Ticket:
 
     response = client.responses.create(
         model="gpt-5-mini",
-        input=prompt
+        input=prompt,
     )
-
     return response.output_text.strip()
+
 
 def write_summary(ticket_id, summary):
     payload = [
@@ -217,14 +197,11 @@ def write_summary(ticket_id, summary):
             "ticket_id": ticket_id,
             "note": f"AI Resolution Summary\n\n{summary}",
             "hiddenfromuser": True,
-            "outcome": "Note Added"
+            "outcome": "Note Added",
         }
     ]
     return halo_post("/api/Actions", payload)
 
-import os
-import re
-import requests
 
 def write_suggested_resolution(ticket_id, suggestion):
     payload = [
@@ -232,15 +209,15 @@ def write_suggested_resolution(ticket_id, suggestion):
             "ticket_id": ticket_id,
             "note": f"AI Suggested Resolution\n\n{suggestion}",
             "hiddenfromuser": True,
-            "outcome": "Note Added"
+            "outcome": "Note Added",
         }
     ]
     return halo_post("/api/Actions", payload)
 
+
 def send_to_teams(ticket_id, summary, technician, client_name):
     webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
     if not webhook_url:
-        print("Teams webhook not configured", flush=True)
         return
 
     ticket_url = f"{HALO_BASE}/ticket?id={ticket_id}"
@@ -249,22 +226,20 @@ def send_to_teams(ticket_id, summary, technician, client_name):
     root_cause = "Unknown"
     resolution_steps = "Not provided"
 
-    import re
-
     issue_match = re.search(
         r"Issue Summary:\s*(.*?)(?=\s*Root Cause:|\Z)",
         summary,
-        re.DOTALL
+        re.DOTALL,
     )
     root_match = re.search(
         r"Root Cause:\s*(.*?)(?=\s*Resolution Steps:|\Z)",
         summary,
-        re.DOTALL
+        re.DOTALL,
     )
     resolution_match = re.search(
         r"Resolution Steps:\s*(.*)",
         summary,
-        re.DOTALL
+        re.DOTALL,
     )
 
     if issue_match:
@@ -288,63 +263,63 @@ def send_to_teams(ticket_id, summary, technician, client_name):
                             "text": f"Ticket {ticket_id} Resolved",
                             "weight": "Bolder",
                             "size": "Large",
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "FactSet",
                             "facts": [
                                 {"title": "Client", "value": client_name},
-                                {"title": "Technician", "value": technician}
+                                {"title": "Technician", "value": technician},
                             ],
-                            "spacing": "Small"
+                            "spacing": "Small",
                         },
                         {
                             "type": "TextBlock",
                             "text": "Issue Summary",
                             "weight": "Bolder",
                             "spacing": "Medium",
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "TextBlock",
                             "text": issue_summary,
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "TextBlock",
                             "text": "Root Cause",
                             "weight": "Bolder",
                             "spacing": "Medium",
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "TextBlock",
                             "text": root_cause,
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "TextBlock",
                             "text": "Resolution Steps",
                             "weight": "Bolder",
                             "spacing": "Medium",
-                            "wrap": True
+                            "wrap": True,
                         },
                         {
                             "type": "TextBlock",
                             "text": resolution_steps,
-                            "wrap": True
-                        }
+                            "wrap": True,
+                        },
                     ],
                     "actions": [
                         {
                             "type": "Action.OpenUrl",
                             "title": "Open Ticket in Halo",
-                            "url": ticket_url
+                            "url": ticket_url,
                         }
-                    ]
-                }
+                    ],
+                },
             }
-        ]
+        ],
     }
 
     try:
@@ -355,6 +330,20 @@ def send_to_teams(ticket_id, summary, technician, client_name):
         print(f"Teams send exception: {str(e)}", flush=True)
 
 
+def extract_ticket_id(body):
+    ticket_id = (
+        body.get("ticket_id")
+        or body.get("object_id")
+        or (body.get("ticket") or {}).get("id")
+        or body.get("id")
+    )
+
+    if not ticket_id:
+        raise ValueError("Missing ticket_id")
+
+    return int(str(ticket_id).strip())
+
+
 @app.route("/")
 def home():
     return "Halo AI Summary App is running"
@@ -362,45 +351,39 @@ def home():
 
 @app.route("/halo-resolved", methods=["POST"])
 def halo_resolved():
-    body = request.json or {}
-    ticket_id = (
-        body.get("ticket_id")
-        or body.get("object_id")
-        or (body.get("ticket") or {}).get("id")
-        or body.get("id")
-    )
+    try:
+        body = request.json or {}
+        ticket_id = extract_ticket_id(body)
 
-    if not ticket_id:
-        return jsonify({"error": "Missing ticket_id"}), 400
+        ticket_text, technician, client_name = build_ticket_text(ticket_id)
+        summary = summarize_ticket(ticket_text)
+        write_summary(ticket_id, summary)
+        send_to_teams(ticket_id, summary, technician, client_name)
 
-    ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
-    summary = summarize_ticket(ticket_text)
-    write_summary(int(ticket_id), summary)
-    send_to_teams(ticket_id, summary, technician, client_name)
+        print(f"Processed resolved ticket {ticket_id} successfully", flush=True)
+        return jsonify({"success": True, "ticket_id": ticket_id})
+    except Exception as e:
+        print(f"ERROR IN /halo-resolved: {str(e)}", flush=True)
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({"success": True, "ticket_id": ticket_id})
 
 @app.route("/halo-new-ticket", methods=["POST"])
 def halo_new_ticket():
-    body = request.json or {}
-    ticket_id = (
-        body.get("ticket_id")
-        or body.get("object_id")
-        or (body.get("ticket") or {}).get("id")
-        or body.get("id")
-    )
+    try:
+        body = request.json or {}
+        ticket_id = extract_ticket_id(body)
 
-    if not ticket_id:
-        return jsonify({"error": "Missing ticket_id"}), 400
+        ticket_text, technician, client_name = build_ticket_text(ticket_id)
 
-    ticket_text, technician, client_name = build_ticket_text(int(ticket_id))
+        if should_skip_ticket(ticket_text):
+            print(f"Skipped marketing ticket {ticket_id}", flush=True)
+            return jsonify({"success": True, "skipped": True, "ticket_id": ticket_id})
 
-if should_skip_ticket(ticket_text):
-    print(f"Skipped marketing ticket {ticket_id}", flush=True)
-    return jsonify({"success": True, "skipped": True, "ticket_id": ticket_id})
+        suggestion = suggest_resolution(ticket_text)
+        write_suggested_resolution(ticket_id, suggestion)
 
-suggestion = suggest_resolution(ticket_text)
-write_suggested_resolution(int(ticket_id), suggestion)
-
-print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
-return jsonify({"success": True, "ticket_id": ticket_id})
+        print(f"Generated suggested resolution for ticket {ticket_id}", flush=True)
+        return jsonify({"success": True, "ticket_id": ticket_id})
+    except Exception as e:
+        print(f"ERROR IN /halo-new-ticket: {str(e)}", flush=True)
+        return jsonify({"error": str(e)}), 500
