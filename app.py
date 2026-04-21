@@ -337,6 +337,45 @@ def send_to_teams(ticket_id, summary, technician, client_name):
     except Exception as e:
         print(f"Teams send exception: {str(e)}", flush=True)
 
+def send_weekly_report_to_teams(report_text):
+    webhook_url = os.environ.get("TEAMS_WEBHOOK_URL")
+    if not webhook_url:
+        return
+
+    card = {
+        "type": "message",
+        "attachments": [
+            {
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "content": {
+                    "type": "AdaptiveCard",
+                    "version": "1.4",
+                    "body": [
+                        {
+                            "type": "TextBlock",
+                            "text": "Weekly AI Ticket Report",
+                            "weight": "Bolder",
+                            "size": "Large",
+                            "wrap": True
+                        },
+                        {
+                            "type": "TextBlock",
+                            "text": report_text,
+                            "wrap": True
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+    try:
+        resp = requests.post(webhook_url, json=card, timeout=10)
+        if not resp.ok:
+            print(f"Weekly report send failed: {resp.status_code} {resp.text[:500]}", flush=True)
+    except Exception as e:
+        print(f"Weekly report send exception: {str(e)}", flush=True)
+
 
 def extract_ticket_id(body):
     ticket_id = (
@@ -355,6 +394,27 @@ def extract_ticket_id(body):
 @app.route("/")
 def home():
     return "Halo AI Summary App is running"
+
+@app.route("/test-weekly-report", methods=["GET"])
+def test_weekly_report():
+    report_text = """Top Issues This Week:
+- Password resets
+- Outlook issues
+- VPN issues
+
+Recurring Root Causes:
+- Expired passwords
+- Outlook profile corruption
+- VPN client misconfiguration
+
+Recommendations:
+- Review password reset process
+- Standardize Outlook repair steps
+- Check VPN client versions
+"""
+
+    send_weekly_report_to_teams(report_text)
+    return jsonify({"success": True, "message": "Test weekly report sent"})
 
 
 @app.route("/halo-resolved", methods=["POST"])
