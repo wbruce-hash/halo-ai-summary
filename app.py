@@ -393,7 +393,7 @@ def extract_ticket_id(body):
 
 @app.route("/")
 def home():
-    return "Halo AI Summary App is running"
+    return "Halo AI Summary App is running - WEEKLY TEST V1"
 
 @app.route("/test-weekly-report", methods=["GET"])
 def test_weekly_report():
