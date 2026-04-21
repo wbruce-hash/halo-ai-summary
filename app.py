@@ -142,6 +142,10 @@ Ticket:
 
 def should_skip_ticket(ticket_text):
     text = ticket_text.lower()
+    
+    # Skip if subject contains TBR
+    if "tbr" in text:
+        return True
 
     marketing_patterns = [
         "unsubscribe",
