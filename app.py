@@ -78,33 +78,30 @@ def build_ticket_text(ticket_id):
     client_name = ticket.get("client_name") or "Unknown Client"
     actions = halo_get("/api/Actions", params={"ticket_id": ticket_id})
 
-   action_items = actions.get("actions") or actions.get("actionsdetails") or []
+    action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-# Prefer the resolver on the ticket itself for resolved-ticket reporting
-technician = (
-    ticket.get("who")
-    or ticket.get("takenby")
-    or "Unassigned"
-)
+    # Prefer ticket-level technician first
+    technician = (
+        ticket.get("who")
+        or ticket.get("takenby")
+        or "Unassigned"
+    )
 
-# Only fall back to action history if ticket-level fields are missing
-if technician == "Unassigned":
-    for action in reversed(action_items):
-        who = action.get("who")
-        who_type = action.get("who_type")
-        note = (action.get("note") or "").lower()
-
-        if not who or who_type != 1:
-            continue
-
-        if "ai resolution summary" in note:
-            continue
-
-        technician = who
-        break
-
+    # Only fall back to actions if needed
     if technician == "Unassigned":
-        technician = ticket.get("takenby") or "Unassigned"
+        for action in reversed(action_items):
+            who = action.get("who")
+            who_type = action.get("who_type")
+            note = (action.get("note") or "").lower()
+
+            if not who or who_type != 1:
+                continue
+
+            if "ai resolution summary" in note:
+                continue
+
+            technician = who
+            break
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
