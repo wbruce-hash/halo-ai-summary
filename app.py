@@ -410,6 +410,19 @@ def get_last_week_tickets():
 
     return tickets
 
+def build_weekly_ticket_text(tickets):
+    parts = []
+
+    for t in tickets[:50]:  # limit to 50 for now
+        summary = t.get("summary", "")
+        details = t.get("details", "")
+
+        parts.append(f"Summary: {summary}")
+        parts.append(f"Details: {details}")
+        parts.append("---")
+
+    return "\n".join(parts)
+
 
 @app.route("/")
 def home():
