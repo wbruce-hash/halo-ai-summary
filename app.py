@@ -390,6 +390,26 @@ def extract_ticket_id(body):
 
     return int(str(ticket_id).strip())
 
+from datetime import datetime, timedelta
+
+
+def get_last_week_tickets():
+    # Calculate date 7 days ago
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    date_str = seven_days_ago.strftime("%Y-%m-%d")
+
+    # Pull tickets updated in last 7 days
+    params = {
+        "dateupdatedafter": date_str
+    }
+
+    data = halo_get("/api/Tickets", params=params)
+
+    # Halo sometimes returns tickets under different keys
+    tickets = data.get("tickets") or data.get("data") or []
+
+    return tickets
+
 
 @app.route("/")
 def home():
