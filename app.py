@@ -423,6 +423,44 @@ def build_weekly_ticket_text(tickets):
 
     return "\n".join(parts)
 
+def generate_weekly_report(ticket_text):
+    prompt = f"""
+You are an MSP operations analyst.
+
+Review these tickets from the last 7 days and create a short weekly service desk report in this exact format:
+
+Top Issues:
+- <issue 1>
+- <issue 2>
+- <issue 3>
+
+Recurring Themes:
+- <theme 1>
+- <theme 2>
+- <theme 3>
+
+Recommendations:
+- <recommendation 1>
+- <recommendation 2>
+- <recommendation 3>
+
+Rules:
+- Keep it concise
+- Focus on patterns, not individual tickets
+- Use plain business language
+- Do not make things up
+- If there is not enough data for a section, say "No clear pattern"
+
+Tickets:
+{ticket_text}
+"""
+
+    response = client.responses.create(
+        model="gpt-5-mini",
+        input=prompt,
+    )
+    return response.output_text.strip()
+
 
 @app.route("/")
 def home():
