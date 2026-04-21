@@ -415,6 +415,14 @@ def get_last_week_tickets():
 def home():
     return "Halo AI Summary App is running - WEEKLY TEST V1"
 
+@app.route("/test-last-week-tickets", methods=["GET"])
+def test_last_week_tickets():
+    tickets = get_last_week_tickets()
+    return jsonify({
+        "success": True,
+        "count": len(tickets)
+    })
+
 @app.route("/test-weekly-report", methods=["GET"])
 def test_weekly_report():
     report_text = """Top Issues This Week:
