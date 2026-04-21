@@ -164,21 +164,20 @@ def suggest_resolution(ticket_text):
     prompt = f"""
 You are a senior MSP help desk analyst.
 
-Read this new support ticket and provide a practical suggested resolution in this exact format:
+Read this new support ticket and provide a SHORT suggested resolution in this exact format:
 
-Probable Issue: <1-2 sentences>
+Probable Issue: <1 short sentence>
 Suggested Steps:
-1. <step one>
-2. <step two>
-3. <step three>
+1. <short step>
+2. <short step>
 Confidence: <Low, Medium, or High>
 
 Rules:
-- Be concise
-- Do not make things up
-- If the issue is unclear, say so
-- Give technician-friendly troubleshooting steps
-- Keep the response internal-facing, not customer-facing
+- Keep it brief
+- Max 2 steps unless absolutely necessary
+- Use simple, direct language
+- Do not explain reasoning
+- If unclear, say "Unknown issue"
 
 Ticket:
 {ticket_text}
@@ -186,8 +185,9 @@ Ticket:
 
     response = client.responses.create(
         model="gpt-5-mini",
-        input=prompt,
+        input=prompt
     )
+
     return response.output_text.strip()
 
 
