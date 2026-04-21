@@ -461,6 +461,19 @@ Tickets:
     )
     return response.output_text.strip()
 
+@app.route("/run-weekly-report", methods=["GET"])
+def run_weekly_report():
+    tickets = get_last_week_tickets()
+    ticket_text = build_weekly_ticket_text(tickets)
+    report = generate_weekly_report(ticket_text)
+    send_weekly_report_to_teams(report)
+
+    return jsonify({
+        "success": True,
+        "ticket_count": len(tickets),
+        "report": report
+    })
+
 
 @app.route("/")
 def home():
