@@ -80,12 +80,15 @@ def build_ticket_text(ticket_id):
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-    # Use assigned technician only
-    technician = (
-        ticket.get("assignedto_name")
-        or ticket.get("assignedto")
-        or "Unassigned"
-    )
+    # Use assigned technician if the ticket has an assigned agent
+    if ticket.get("agent_id"):
+        technician = (
+            ticket.get("who")
+            or ticket.get("takenby")
+            or "Unassigned"
+        )
+    else:
+        technician = "Unassigned"
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
