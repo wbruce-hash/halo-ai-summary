@@ -80,28 +80,12 @@ def build_ticket_text(ticket_id):
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-    # Prefer ticket-level technician first
+    # Use assigned technician only
     technician = (
-        ticket.get("who")
-        or ticket.get("takenby")
+        ticket.get("assignedto_name")
+        or ticket.get("assignedto")
         or "Unassigned"
     )
-
-    # Only fall back to actions if needed
-    if technician == "Unassigned":
-        for action in reversed(action_items):
-            who = action.get("who")
-            who_type = action.get("who_type")
-            note = (action.get("note") or "").lower()
-
-            if not who or who_type != 1:
-                continue
-
-            if "ai resolution summary" in note:
-                continue
-
-            technician = who
-            break
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
