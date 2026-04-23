@@ -80,15 +80,21 @@ def build_ticket_text(ticket_id):
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-    # Use assigned technician if the ticket has an assigned agent
-    if ticket.get("agent_id"):
-        technician = (
-            ticket.get("who")
-            or ticket.get("takenby")
-            or "Unassigned"
-        )
-    else:
-        technician = "Unassigned"
+    # Look up assigned technician by agent_id
+    technician = "Unassigned"
+    agent_id = ticket.get("agent_id")
+
+    if agent_id:
+        try:
+            agent = halo_get(f"/api/Agents/{agent_id}")
+            technician = (
+                agent.get("name")
+                or agent.get("agent_name")
+                or agent.get("full_name")
+                or "Unassigned"
+            )
+        except Exception:
+            technician = "Unassigned"
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
