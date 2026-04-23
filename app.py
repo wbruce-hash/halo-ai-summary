@@ -87,13 +87,16 @@ def build_ticket_text(ticket_id):
     if agent_id:
         try:
             agent = halo_get(f"/api/Agents/{agent_id}")
+            print("AGENT LOOKUP:", agent, flush=True)
+
             technician = (
                 agent.get("name")
                 or agent.get("agent_name")
                 or agent.get("full_name")
                 or "Unassigned"
             )
-        except Exception:
+        except Exception as e:
+            print("AGENT LOOKUP ERROR:", str(e), flush=True)
             technician = "Unassigned"
 
     parts = [
