@@ -80,24 +80,12 @@ def build_ticket_text(ticket_id):
 
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
-    # Look up assigned technician by agent_id
-    technician = "Unassigned"
-    agent_id = ticket.get("agent_id")
-
-    if agent_id:
-        try:
-            agent = halo_get(f"/api/Agents/{agent_id}")
-            print("AGENT LOOKUP:", agent, flush=True)
-
-            technician = (
-                agent.get("name")
-                or agent.get("agent_name")
-                or agent.get("full_name")
-                or "Unassigned"
-            )
-        except Exception as e:
-            print("AGENT LOOKUP ERROR:", str(e), flush=True)
-            technician = "Unassigned"
+    # Use Halo's ticket-level technician fields
+    technician = (
+        ticket.get("who")
+        or ticket.get("takenby")
+        or "Unassigned"
+    )
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
