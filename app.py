@@ -41,6 +41,23 @@ def get_halo_token():
     token_cache["expires_at"] = now + int(data.get("expires_in", 3600))
     return token_cache["access_token"]
 
+def get_agent_name(agent_id):
+    try:
+        data = halo_get("/api/agents")
+        agents = data.get("agents") or data.get("data") or []
+
+        for agent in agents:
+            if str(agent.get("id")) == str(agent_id):
+                return (
+                    agent.get("name")
+                    or agent.get("agent_name")
+                    or agent.get("full_name")
+                )
+
+    except Exception as e:
+        print("AGENT LIST ERROR:", str(e), flush=True)
+
+    return None
 
 def halo_get(path, params=None):
     token = get_halo_token()
@@ -81,11 +98,14 @@ def build_ticket_text(ticket_id):
     action_items = actions.get("actions") or actions.get("actionsdetails") or []
 
     # Use Halo's ticket-level technician fields
-    technician = (
-        ticket.get("who")
-        or ticket.get("takenby")
-        or "Unassigned"
-    )
+    technician = "Unassigned"
+
+    agent_id = ticket.get("agent_id")
+
+    if agent_id:
+        name = get_agent_name(agent_id)
+        if name:
+            technician = name
 
     print(
         "TECHNICIAN FIELDS:",
