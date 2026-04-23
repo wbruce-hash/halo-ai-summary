@@ -87,7 +87,13 @@ def build_ticket_text(ticket_id):
         or "Unassigned"
     )
 
-        print("TECHNICIAN FIELDS:", ticket.get("who"), ticket.get("takenby"), ticket.get("agent_id"), flush=True)
+    print(
+        "TECHNICIAN FIELDS:",
+        ticket.get("who"),
+        ticket.get("takenby"),
+        ticket.get("agent_id"),
+        flush=True
+    )
 
     parts = [
         f"Ticket ID: {ticket.get('id')}",
